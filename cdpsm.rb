@@ -44,7 +44,13 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each do |node
 
   # open a new XML Builder
   builder = Nokogiri::XML::Builder.new(:encoding => 'UTF-8') do |xml|
-    xml.mods({'version' => '3.4', 'xmlns' => 'http://www.loc.gov/mods/v3'}) {
+    xml.mods({
+        'version' => '3.4',
+        'xmlns' => 'http://www.loc.gov/mods/v3',
+        'xmlns:xlink' => 'http://www.w3.org/1999/xlink',
+        'xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance',
+        'xsi:schemaLocation' => 'http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-4.xsd'
+    }) {
       # map titles, allowing for multiple titles in source XML
       # a cataloger determines which titles receive disambiguating attributes
       node.xpath("dc:title").each do |title|
