@@ -52,11 +52,18 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each do |node
         'xsi:schemaLocation' => 'http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-4.xsd'
     }) {
       # map titles, allowing for multiple titles in source XML
-      # a cataloger determines which titles receive disambiguating attributes
-      node.xpath("dc:title").each do |title|
-        xml.titleInfo {
-          xml.title title.text
-        }
+      # we are lazy and take the first title as main title and others as alternative
+      node.xpath("dc:title").each_with_index do |title, index|
+        case index
+        when 0
+          xml.titleInfo {
+            xml.title title.text
+          }
+        else
+          xml.titleInfo(:type => 'alternative') {
+            xml.title title.text
+          }
+        end
       end
 
       # map creators; we assume that the 'creator' is in fact the person being interviewed
