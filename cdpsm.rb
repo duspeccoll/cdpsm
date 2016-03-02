@@ -157,17 +157,14 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each do |node
       # It will be the cataloger's job to read through these mods:abstracts and figure out which ones are real and which ones need to be re-assigned to another MODS element
       node.xpath("dc:description").each do |description|
         case description.text
-        when /^Length:/, /^File size:/, /^Master file:/, /^Computer hardware:/, /^Sound quality note:/, /^\w+\/\w+$/
-          case description.text
-          when /^Length:/, /^File size:/
-            extents.push(description.text.gsub(/^(\w|\s)+: /, "").strip)
-          when /^Master file:/
-            physdesc.push(description.text.gsub(/^(\w|\s)+: /, "").strip)
-          when /^Computer hardware:/, /^Sound quality note:/
-            physdesc.push(description.text.strip)
-          when /^\w+\/\w+$/
-            mimetypes.push(description.text.strip)
-          end
+        when /^Length:/, /^File size:/
+          extents.push(description.text.gsub(/^(\w|\s)+: /, "").strip)
+        when /^Master file:/
+          physdesc.push(description.text.gsub(/^(\w|\s)+: /, "").strip)
+        when /^Computer hardware:/, /^Sound quality note:/
+          physdesc.push(description.text.strip)
+        when /^\w+\/\w+$/
+          mimetypes.push(description.text.strip)
         else
           xml.abstract description.text.strip
         end
