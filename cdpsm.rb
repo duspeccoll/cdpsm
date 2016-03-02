@@ -192,11 +192,11 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each do |node
         subjects.push(subject.text.strip)
       end
       if !subjects.empty?
-        xml.subject {
-          subjects.each do |subject|
+        subjects.each do |subject|
+          xml.subject {
             xml.topic subject
-          end
-        }
+          }
+        end
       end
 
       # here we assign the ID we parsed out earlier as a local identifier
