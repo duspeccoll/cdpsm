@@ -29,9 +29,8 @@ end
 input = get_file
 
 Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_index do |node, i|
-
-  # the identifiers on these are all over the place so we just number them in sequence and name the files that way
-  id = i + 1
+  # CoCR customization: no attempt to create identifiers, just use the index number
+  id = i+1
   output = "#{id.to_s.rjust(3,"0")}.xml"
 
   # open a new XML Builder
@@ -44,7 +43,7 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_ind
         'xsi:schemaLocation' => 'http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-4.xsd'
     }) {
       # map titles, allowing for multiple titles in source XML
-      # a cataloger determines which titles receive disambiguating attributes
+      # we are lazy and take the first title as main title and others as alternative
       node.xpath("dc:title").each_with_index do |title, index|
         case index
         when 0
@@ -58,11 +57,18 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_ind
         end
       end
 
-      # map creators
-      # customization for CoBNi: these aren't oral histories so we don't do the roles
+      # map creators; we assume that the 'creator' is in fact the person being interviewed
       node.xpath("dc:creator").each do |creator|
         xml.name {
           xml.namePart creator.text.strip
+          xml.role {
+            xml.roleTerm(:type => 'code') {
+              xml.text "ive"
+            }
+            xml.roleTerm(:type => 'text') {
+              xml.text "interviewee"
+            }
+          }
         }
       end
 
@@ -72,10 +78,10 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_ind
           xml.namePart contributor.text.strip
           xml.role {
             xml.roleTerm(:type => 'code') {
-              xml.text "ctb"
+              xml.text "ivr"
             }
             xml.roleTerm(:type => 'text') {
-              xml.text "contributor"
+              xml.text "interviewer"
             }
           }
         }
@@ -107,14 +113,14 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_ind
 
       # map originInfo, allowing for multiple publishers and dates
       xml.originInfo {
-        # handle publishers, concatenate each into a single 'publisher' element
-        publishers = ''
+        # handle publishers; each receives its own <publisher> element
+        publishers = []
         node.xpath("dc:publisher").each do |publisher|
-          if publisher.text != ''
-            publishers += "#{publisher.text} "
-          end
+          publishers.push(publisher.text)
         end
-        xml.publisher publishers.strip
+        publishers.each do |publisher|
+          xml.publisher publisher
+        end
 
         # handle dates
         # in cases of multiple dates we assume the earlier date is creation and the later date is digitization
@@ -197,18 +203,9 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_ind
         end
       end
 
-      # going to take this metadata at its word that these are in the Internet Archive and call all those links relatedItems
-      node.xpath("dc:identifier").each do |identifier|
-        xml.relatedItem {
-          xml.location {
-            xml.url identifier.text.strip
-          }
-        }
-      end
-
-      # and here is our constructed local identifier
+      # here we assign the ID we parsed out earlier as a local identifier
       xml.identifier(:type => 'local') {
-        xml.text "cobni_#{id.to_s.rjust(3,"0")}"
+        xml.text id
       }
 
       # Map dc:rights. The gsub() is because some of them link out to external sources for more information; metadata shouldn't do that but I'm not going to argue for now.
