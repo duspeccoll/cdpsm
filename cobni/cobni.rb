@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 ##
 # Script to take whatever Heritage West DC records we have and map them to MODS for Islandora ingest.
 #
@@ -7,26 +8,16 @@
 require 'nokogiri'
 require 'json'
 
-def get_file
-  print "Dublin Core XML file: "
-  fname = gets.chomp
-  if File.exist?(fname)
-    doc = Nokogiri::XML(File.read(fname))
-    unless doc.errors.empty?
-      doc.errors.each do |error|
-        puts "#{fname} not well-formed: #{error}"
-      end
-      puts "Exiting."
-      exit
-    end
-  else
-    puts "#{fname} not found."
-    fname = get_file
-  end
-  return fname
+case
+when ARGV.length == 0
+  puts "Usage: eval.rb [file]"
+  exit
+when ARGV.length > 1
+  puts "Script will only evaluate first file provided"
 end
 
-input = get_file
+input = ARGV[0]
+values = Hash.new
 
 Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_index do |node, i|
 
@@ -44,7 +35,6 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_ind
         'xsi:schemaLocation' => 'http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-4.xsd'
     }) {
       # map titles, allowing for multiple titles in source XML
-      # a cataloger determines which titles receive disambiguating attributes
       node.xpath("dc:title").each_with_index do |title, index|
         case index
         when 0
@@ -140,19 +130,20 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_ind
       mimetypes = []
       physdesc = []
 
-      # map dc:format; anything that reads like a MIME type (/^\w+\/\w+$/) goes to mimetypes[], otherwise it goes to extents[] (dc:format being home to both file format and file size/duration)
+      # map dc:format
+      # anything that reads like a MIME type (/^\w+\/\w+$/) goes to mimetypes[], otherwise we ignore it
       node.xpath("dc:format").each do |f|
         case f.text
         when /^\w+\/\w+$/
           mimetypes.push(f.text.strip)
         else
-          extents.push(f.text.strip)
+          nil
         end
       end
 
       # map dc:description
       # anything that looks even remotely like technical metadata gets mapped to one of our three physical description arrays; otherwise we treat it like a mods:abstract
-      # It will be the cataloger's job to read through these mods:abstracts and figure out which ones are real and which ones need to be re-assigned to another MODS element
+      # It will be the cataloger's job to read through these mods:abstracts and figure out which ones are real and which ones are notes of some sort
       node.xpath("dc:description").each do |description|
         case description.text
         when /^Length:/, /^File size:/
