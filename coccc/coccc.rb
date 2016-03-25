@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 ##
 # Script to take whatever Heritage West DC records we have and map them to MODS for Islandora ingest.
 #
@@ -161,8 +162,10 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each do |node
         case f.text
         when /^\w+\/\w+$/
           mimetypes.push(f.text.strip)
+        when 'Mp3'
+          mimetypes.push('audio/mp3')
         else
-          extents.push(f.text.strip)
+          physdesc.push(f.text.strip)
         end
       end
 
