@@ -29,24 +29,16 @@ end
 
 input = get_file
 
-Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_index do |node, i|
+Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each do |node|
   # get our identifiers off the dc:identifier element, used to assign XML file names
-  # CoCo customization: some don't have identifiers, so we use the index number for those
   ids = []
-  case
-  when !node.xpath("dc:identifier").empty?
-    node.xpath("dc:identifier").each do |identifier|
-      ids.push(identifier.text.gsub("http://dcbuilder.bcr.org/streaming/index.cfm?filename=",'').gsub(/\..+$/,'')) if identifier.text.start_with?('http://dcbuilder.bcr.org')
-    end
-    if ids.length == 1
-      id = ids[0]
-    else
-      id = ids.uniq![0]
-    end
+  node.xpath("dc:identifier").each do |identifier|
+    ids.push(identifier.text.gsub("http://dcbuilder.bcr.org/streaming/index.cfm?filename=",'').gsub(/\..+$/,'')) if identifier.text.start_with?('http://dcbuilder.bcr.org')
+  end
+  if ids.length == 1
     id = ids[0]
   else
-    id = i+1
-    id = "#{id.to_s.rjust(3,"0")}"
+    id = ids.uniq![0]
   end
 
   output = "#{id}.xml"
@@ -136,7 +128,7 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_ind
         node.xpath("dc:publisher").each do |publisher|
           publishers.push(publisher.text)
         end
-        publishers.uniq.each do |publisher|
+        publishers.each do |publisher|
           xml.publisher publisher
         end
 
@@ -148,7 +140,7 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_ind
         end
         dates.sort!
         xml.dateCreated dates[0]
-        xml.dateCaptured dates[1] if dates[1]
+        xml.dateCaptured dates[1]
       }
 
       # map language; just the code, no text representation
@@ -169,8 +161,6 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_ind
         case f.text
         when /^\w+\/\w+$/
           mimetypes.push(f.text.strip)
-        when /^User system/
-          physdesc.push(f.text.strip)
         else
           extents.push(f.text.strip)
         end

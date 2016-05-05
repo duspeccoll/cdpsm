@@ -29,24 +29,21 @@ end
 
 input = get_file
 
-Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_index do |node, i|
+Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each do |node|
   # get our identifiers off the dc:identifier element, used to assign XML file names
-  # CoCo customization: some don't have identifiers, so we use the index number for those
   ids = []
-  case
-  when !node.xpath("dc:identifier").empty?
-    node.xpath("dc:identifier").each do |identifier|
-      ids.push(identifier.text.gsub("http://dcbuilder.bcr.org/streaming/index.cfm?filename=",'').gsub(/\..+$/,'')) if identifier.text.start_with?('http://dcbuilder.bcr.org')
+  node.xpath("dc:identifier").each do |identifier|
+    case
+    when identifier.text.start_with?('http://dcbuilder.bcr.org')
+      ids.push(identifier.text.gsub("http://dcbuilder.bcr.org/streaming/index.cfm?filename=",'').gsub(/\..+$/,'').gsub(/-.+$/,''))
+    when identifier.text.start_with?('http://digital2.library.colostate.edu')
+      ids.push(identifier.text.gsub("http://digital2.library.colostate.edu/gfr/image/",'').gsub(/\..+$/,''))
     end
-    if ids.length == 1
-      id = ids[0]
-    else
-      id = ids.uniq![0]
-    end
+  end
+  if ids.length == 1
     id = ids[0]
   else
-    id = i+1
-    id = "#{id.to_s.rjust(3,"0")}"
+    id = ids.sort.uniq![0]
   end
 
   output = "#{id}.xml"
@@ -136,7 +133,7 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_ind
         node.xpath("dc:publisher").each do |publisher|
           publishers.push(publisher.text)
         end
-        publishers.uniq.each do |publisher|
+        publishers.each do |publisher|
           xml.publisher publisher
         end
 
@@ -148,7 +145,7 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_ind
         end
         dates.sort!
         xml.dateCreated dates[0]
-        xml.dateCaptured dates[1] if dates[1]
+        xml.dateCaptured dates[1]
       }
 
       # map language; just the code, no text representation
@@ -169,8 +166,6 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_ind
         case f.text
         when /^\w+\/\w+$/
           mimetypes.push(f.text.strip)
-        when /^User system/
-          physdesc.push(f.text.strip)
         else
           extents.push(f.text.strip)
         end
@@ -181,14 +176,8 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_ind
       # It will be the cataloger's job to read through these mods:abstracts and figure out which ones are real and which ones need to be re-assigned to another MODS element
       node.xpath("dc:description").each do |description|
         case description.text
-        when /^Length:/, /^File size:/
-          extents.push(description.text.gsub(/^(\w|\s)+: /, "").strip)
-        when /^Master file:/
-          physdesc.push(description.text.gsub(/^(\w|\s)+: /, "").strip)
-        when /^Computer hardware:/, /^Sound quality note:/
+        when /^.+:/
           physdesc.push(description.text.strip)
-        when /^\w+\/\w+$/
-          mimetypes.push(description.text.strip)
         else
           xml.abstract description.text.strip
         end
@@ -229,7 +218,7 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_ind
       }
 
       # Map dc:rights. The gsub() is because some of them link out to external sources for more information; metadata shouldn't do that but I'm not going to argue for now.
-      xml.accessCondition node.xpath("dc:rights").text.strip.gsub('www.', 'http://www.')
+      xml.accessCondition node.xpath("dc:rights").text.strip
     }
   end
 
