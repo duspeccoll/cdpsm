@@ -43,7 +43,7 @@ Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each_with_ind
     else
       id = ids.uniq![0]
     end
-    id = ids[0]
+    id = ids[0].strip
   else
     id = i+1
     id = "#{id.to_s.rjust(3,"0")}"

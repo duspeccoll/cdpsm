@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 ##
 # Script to take whatever Heritage West DC records we have and map them to MODS for Islandora ingest.
 #
