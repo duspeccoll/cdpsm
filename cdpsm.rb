@@ -8,16 +8,26 @@
 require 'nokogiri'
 require 'json'
 
-case
-when ARGV.length == 0
-  puts "Usage: eval.rb [file]"
-  exit
-when ARGV.length > 1
-  puts "Script will only evaluate first file provided"
+def get_file
+  print "Dublin Core XML file: "
+  fname = gets.chomp
+  if File.exist?(fname)
+    doc = Nokogiri::XML(File.read(fname))
+    unless doc.errors.empty?
+      doc.errors.each do |error|
+        puts "#{fname} not well-formed: #{error}"
+      end
+      puts "Exiting."
+      exit
+    end
+  else
+    puts "#{fname} not found."
+    fname = get_file
+  end
+  return fname
 end
 
-input = ARGV[0]
-values = Hash.new
+input = get_file
 
 Nokogiri::XML.parse(File.read(input)).xpath("/metadata/oai_dc:dc").each do |node|
   # get our identifiers off the dc:identifier element, used to assign XML file names
